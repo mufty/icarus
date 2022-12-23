@@ -86,6 +86,9 @@ class EventHandlers {
             return await this.eliteLog.getNewest(count)
           }
         },
+        getMissions: async () => {
+          return await this.eliteLog.getEvent("Missions")
+        },
         getSystem: (args) => this.system.getSystem(args),
         getShipStatus: (args) => this.shipStatus.getShipStatus(args),
         getMaterials: (args) => this.materials.getMaterials(args),

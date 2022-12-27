@@ -148,7 +148,7 @@ export default function MisPage () {
   return (
     <Layout connected={connected} active={active} ready={ready && componentReady}>
       <Panel layout='left-half' scrollable>
-        <MisListPanel missionEntries={missionEntries} setSelectedMissionEntry={selectedMissionEntry} />
+        <MisListPanel missionEntries={missionEntries} setSelectedMissionEntry={setSelectedMissionEntry} />
         {ready && missionEntries.length === 0 && <p style={{ margin: '2rem 0' }} className='text-center text-muted'>No recent log entries</p>}
       </Panel>
       <Panel layout='right-half' scrollable>

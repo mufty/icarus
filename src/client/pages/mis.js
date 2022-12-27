@@ -57,7 +57,7 @@ export default function MisPage () {
 
   function addMission(mission) {
     if(mission.Expiry) {
-      const currentDate = Date.now()
+      const currentDate = new Date()
       currentDate.setFullYear(currentDate.getFullYear() + ADD_YEARS_IN_FUTURE)
       const currentTS = currentDate.getTime()
       const expiryDateTs = eliteDateTime(mission.Expiry).jsDate.getTime()

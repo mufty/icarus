@@ -14,6 +14,7 @@ export default function NavListPage () {
   const { connected, active, ready } = useSocket()
   const [componentReady, setComponentReady] = useState(false)
   const [system, setSystem] = useState()
+  const [signals, setSignals] = useState()
   const [systemObject, setSystemObject] = useState()
   const [helpVisible, setHelpVisible] = useState(false)
   
@@ -70,11 +71,23 @@ export default function NavListPage () {
       const newSystem = await sendEvent('getSystem', { useCache: false })
       if (!newSystem) return // If no result, don't update map
       setSystemObject(null) // Clear selected object
+      setSignals(null) // reset signals
       setSystem(newSystem)
     }
     if (['FSSDiscoveryScan', 'FSSAllBodiesFound', 'Scan'].includes(log.event)) {
       const newSystem = await sendEvent('getSystem', { name: system?.name, useCache: false })
       if (newSystem) setSystem(newSystem)
+    }
+    if(['FSSBodySignals'].includes(log.event)) {
+      let newSignals = []
+      if(signals)
+        newSignals = signals
+      //Add signals
+      if(log.Signals) {
+        newSignals.push(log)
+      }
+
+      setSignals(newSignals)
     }
   }), [system])
 
@@ -152,7 +165,7 @@ export default function NavListPage () {
       </div>
       <Layout connected={connected} active={active} ready={ready} loader={!componentReady}>
         <Panel layout='full-width' navigation={NavPanelNavItems('List', query)} search={search} exit={system?.isCurrentLocation === false ? () => getSystem() : null}>
-          <NavigationListPanel system={system} systemObject={systemObject} setSystemObject={setSystemObject} showHelp={() => setHelpVisible(true)} />
+          <NavigationListPanel system={system} systemObject={systemObject} signals={signals} setSystemObject={setSystemObject} showHelp={() => setHelpVisible(true)} />
           <NavigationInspectorPanel systemObject={systemObject} setSystemObjectByName={setSystemObjectByName} />
         </Panel>
       </Layout>

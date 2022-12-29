@@ -175,7 +175,7 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject }
           <span className={systemObject.isLandable ? 'text-secondary' : ''}>
             {systemObject.isLandable === true && <i title='Landable' className='float-right icon icarus-terminal-planet-lander' />}
             {(systemObject.atmosphereComposition && !systemObject?.subType?.toLowerCase()?.includes('gas giant')) && <i className='float-right icon icarus-terminal-planet-atmosphere' />}
-            {((systemObject.volcanismType && systemObject.volcanismType !== 'No volcanism') || systemObject?.Geological) && <i className='float-right icon icarus-terminal-planet-volcanic'>{systemObject.Geological?.Count}</i>}
+            {((systemObject.volcanismType && systemObject.volcanismType !== 'No volcanism') || systemObject?.Geological) && <i className='float-right icon icarus-terminal-planet-volcanic'><span className='text-superscript'>{systemObject.Geological?.Count}</span></i>}
             {systemObject.terraformingState && systemObject.terraformingState !== 'Not terraformable' && systemObject.terraformingState !== 'Terraformed' && <i className='float-right icon icarus-terminal-planet-terraformable' />}
             {systemObject?.subType?.toLowerCase() === 'earth-like world' && <i className='float-right icon icarus-terminal-planet-earthlike' />}
             {systemObject?.subType?.toLowerCase() === 'ammonia world' && <i className='float-right icon icarus-terminal-planet-ammonia-world' />}
@@ -184,7 +184,7 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject }
             {systemObject?.subType?.toLowerCase()?.includes('gas giant') && <i className='float-right icon icarus-terminal-planet-gas-giant' />}
             {systemObject?.subType?.toLowerCase()?.includes('water-based life') && <i className='float-right icon icarus-terminal-planet-water-based-life' />}
             {systemObject?.subType?.toLowerCase()?.includes('ammonia-based life') && <i className='float-right icon icarus-terminal-planet-ammonia-based-life' />}
-            {(systemObject?.subType?.toLowerCase()?.includes('with life') || systemObject?.Biological) && <i className='float-right icon icarus-terminal-planet-life'>{systemObject.Biological?.Count}</i>}
+            {(systemObject?.subType?.toLowerCase()?.includes('with life') || systemObject?.Biological) && <i className='float-right icon icarus-terminal-planet-life'><span className='text-superscript'>{systemObject.Biological?.Count}</span></i>}
             {systemObject.rings && <i className='float-right icon icarus-terminal-planet-ringed' />}
             {(systemObject?.subType?.toLowerCase() === 'earth-like world'
               || systemObject?.subType?.toLowerCase() === 'water world'

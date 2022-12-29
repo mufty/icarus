@@ -1,7 +1,28 @@
+import { useState, useEffect } from 'react'
+import { eventListener } from 'lib/socket'
 import CopyOnClick from 'components/copy-on-click'
 import { SPACE_STATIONS, SURFACE_PORTS, PLANETARY_BASES, MEGASHIPS } from '../../../../shared/consts'
 
-export default function NavigationInspectorPanel ({ system, systemObject, signals, setSystemObject, showHelp }) {
+export default function NavigationInspectorPanel ({ system, systemObject, setSystemObject, showHelp }) {
+  const [signals, setSignals] = useState()
+
+  useEffect(() => eventListener('newLogEntry', async (log) => {
+    if (['Location', 'FSDJump'].includes(log.event)) {
+      setSignals(null) // reset signals
+    }
+    if(['FSSBodySignals'].includes(log.event)) {
+      let newSignals = []
+      if(signals)
+        newSignals = signals
+      //Add signals
+      if(log.Signals) {
+        newSignals.push(log)
+      }
+
+      setSignals(newSignals)
+    }
+  }))
+
   if (!system) return null
 
   // Check if any bodies are visible on map (i.e. any stars *or* any "additional objects")
@@ -67,34 +88,25 @@ function NavigationTableBody ({ system, setSystemObject, signals }) {
   if (!system?.stars) return tableRows // Handle unknown systems
 
   for (const star of system.stars) {
-    tableRows.push(<NavigationTableRow key={`${star.name}_${star.id}`} stars={system.stars} systemObject={star} setSystemObject={setSystemObject} />)
+    tableRows.push(<NavigationTableRow key={`${star.name}_${star.id}`} stars={system.stars} systemObject={star} setSystemObject={setSystemObject} signals={signals} />)
 
     for (const systemObject of star._children) {
-      tableRows = tableRows.concat(<NavigationTableRowChildren key={`${systemObject.name}_${systemObject.id}`} stars={system.stars} systemObject={systemObject} signals={signals} setSystemObject={setSystemObject} />)
+      tableRows = tableRows.concat(<NavigationTableRowChildren key={`${systemObject.name}_${systemObject.id}`} stars={system.stars} systemObject={systemObject} setSystemObject={setSystemObject} signals={signals} />)
     }
   }
 
   return tableRows
 }
 
-function NavigationTableRowChildren ({ stars, systemObject, signals, setSystemObject, depth = 1 }) {
+function NavigationTableRowChildren ({ stars, systemObject, setSystemObject, signals, depth = 1 }) {
   let tableRows = []
 
-  //find signals for object
-  if(signals) {
-    for(let signal of signals) {
-      if(signal.BodyID == systemObject.bodyId)
-        for(let singleSignal of signal.Signals){
-          systemObject[singleSignal.Type_Localised] = singleSignal
-        }
-    }
-  }
-  tableRows.push(<NavigationTableRow key={`${systemObject.name}_${systemObject.id}`} stars={stars} systemObject={systemObject} depth={depth} setSystemObject={setSystemObject} />)
+  tableRows.push(<NavigationTableRow key={`${systemObject.name}_${systemObject.id}`} stars={stars} systemObject={systemObject} depth={depth} setSystemObject={setSystemObject} signals={signals} />)
 
   // Includes Planets, Starports and Megaships in orbit
   if (systemObject._children) {
     for (const childSystemObject of systemObject._children) {
-      tableRows = tableRows.concat(<NavigationTableRowChildren key={`${childSystemObject.name}_${childSystemObject.id}`} stars={stars} systemObject={childSystemObject} setSystemObject={setSystemObject} depth={depth + 1} />)
+      tableRows = tableRows.concat(<NavigationTableRowChildren key={`${childSystemObject.name}_${childSystemObject.id}`} stars={stars} systemObject={childSystemObject} setSystemObject={setSystemObject} signals={signals} depth={depth + 1} />)
     }
   }
 
@@ -106,7 +118,7 @@ function NavigationTableRowChildren ({ stars, systemObject, signals, setSystemOb
   return tableRows
 }
 
-function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject }) {
+function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject, signals }) {
   if (!systemObject.type) {
     console.warn('Unknown type of system object', systemObject)
     return null
@@ -117,6 +129,17 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject }
       return (<tr className='table-row--disabled'><td colSpan='2'><hr /></td></tr>)
     } else {
       return null
+    }
+  }
+
+  //find signals for object
+  if(signals) {
+    for(let signal of signals) {
+      if(signal.BodyID == systemObject.bodyId)
+        for(let singleSignal of signal.Signals){
+          //TODO do not use localised text for other languages
+          systemObject[singleSignal.Type_Localised] = singleSignal
+        }
     }
   }
 
@@ -175,7 +198,7 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject }
           <span className={systemObject.isLandable ? 'text-secondary' : ''}>
             {systemObject.isLandable === true && <i title='Landable' className='float-right icon icarus-terminal-planet-lander' />}
             {(systemObject.atmosphereComposition && !systemObject?.subType?.toLowerCase()?.includes('gas giant')) && <i className='float-right icon icarus-terminal-planet-atmosphere' />}
-            {((systemObject.volcanismType && systemObject.volcanismType !== 'No volcanism') || systemObject?.Geological) && <i className='float-right icon icarus-terminal-planet-volcanic'><span className='text-superscript'>{systemObject.Geological?.Count}</span></i>}
+            {((systemObject.volcanismType && systemObject.volcanismType !== 'No volcanism') || systemObject.Geological) && <i className='float-right icon icarus-terminal-planet-volcanic'><span className='text-superscript'>{systemObject.Geological?.Count}</span></i>}
             {systemObject.terraformingState && systemObject.terraformingState !== 'Not terraformable' && systemObject.terraformingState !== 'Terraformed' && <i className='float-right icon icarus-terminal-planet-terraformable' />}
             {systemObject?.subType?.toLowerCase() === 'earth-like world' && <i className='float-right icon icarus-terminal-planet-earthlike' />}
             {systemObject?.subType?.toLowerCase() === 'ammonia world' && <i className='float-right icon icarus-terminal-planet-ammonia-world' />}
@@ -184,7 +207,7 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject }
             {systemObject?.subType?.toLowerCase()?.includes('gas giant') && <i className='float-right icon icarus-terminal-planet-gas-giant' />}
             {systemObject?.subType?.toLowerCase()?.includes('water-based life') && <i className='float-right icon icarus-terminal-planet-water-based-life' />}
             {systemObject?.subType?.toLowerCase()?.includes('ammonia-based life') && <i className='float-right icon icarus-terminal-planet-ammonia-based-life' />}
-            {(systemObject?.subType?.toLowerCase()?.includes('with life') || systemObject?.Biological) && <i className='float-right icon icarus-terminal-planet-life'><span className='text-superscript'>{systemObject.Biological?.Count}</span></i>}
+            {(systemObject?.subType?.toLowerCase()?.includes('with life') || systemObject.Biological) && <i className='float-right icon icarus-terminal-planet-life'><span className='text-superscript'>{systemObject.Biological?.Count}</span></i>}
             {systemObject.rings && <i className='float-right icon icarus-terminal-planet-ringed' />}
             {(systemObject?.subType?.toLowerCase() === 'earth-like world'
               || systemObject?.subType?.toLowerCase() === 'water world'

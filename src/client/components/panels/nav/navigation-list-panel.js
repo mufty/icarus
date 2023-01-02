@@ -6,18 +6,22 @@ import { SPACE_STATIONS, SURFACE_PORTS, PLANETARY_BASES, MEGASHIPS } from '../..
 export default function NavigationInspectorPanel ({ system, systemObject, setSystemObject, showHelp }) {
   const [signals, setSignals] = useState()
 
+  async function initData (system) {
+    const storedSignals = await sendEvent('getFSSBodySignalsForSystem', { system: system?.name })
+    if(!storedSignals) {
+      setSignals(null)
+    } else {
+      setSignals(storedSignals)
+    }
+  }
   //get stored signals from this system on startup
   useEffect(async () => {
-    const storedSignals = await sendEvent('getFSSBodySignalsForSystem', { name: system?.name })
-    if(!storedSignals)
-      return
-    
-    setSignals(storedSignals)
+    await initData(system)
   }, [system])
 
   useEffect(() => eventListener('newLogEntry', async (log) => {
     if (['Location', 'FSDJump'].includes(log.event)) {
-      setSignals(null) // reset signals
+      await initData(system) // reset signals
     }
     if(['FSSBodySignals'].includes(log.event)) {
       let newSignals = []
@@ -30,7 +34,7 @@ export default function NavigationInspectorPanel ({ system, systemObject, setSys
 
       setSignals(newSignals)
 
-      await sendEvent('setFSSBodySignalsForSystem', { name: system?.name, newSignals })
+      await sendEvent('setFSSBodySignalsForSystem', { system: system?.name, data: newSignals })
     }
   }, [system]))
 

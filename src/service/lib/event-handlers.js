@@ -195,17 +195,17 @@ class EventHandlers {
           }
           */
         },
-        getFSSBodySignalsForSystem: ({system}) => {
-          const data = this.storage.getStorage('FSSBodySignals')
+        getFSSBodySignalsForSystem: async ({system}) => {
+          const data = await this.storage.getStorage('FSSBodySignals')
           if(!data)
             return null
 
           return data[system]
         },
         setFSSBodySignalsForSystem: ({system, data}) => {
-          const storedData = this.storage.getStorage('FSSBodySignals')
+          let storedData = this.storage.getStorage('FSSBodySignals')
           if(!storedData)
-            return
+            storedData = {}
           
           storedData[system] = data
           this.storage.saveStorage('FSSBodySignals', storedData)

@@ -38,6 +38,7 @@ const Inventory = require('./event-handlers/inventory')
 const CmdrStatus = require('./event-handlers/cmdr-status')
 const NavRoute = require('./event-handlers/nav-route')
 const TextToSpeech = require('./event-handlers/text-to-speech')
+const Storage = require('./event-handlers/storage')
 
 class EventHandlers {
   constructor ({ eliteLog, eliteJson }) {
@@ -50,6 +51,7 @@ class EventHandlers {
     this.engineers = new Engineers({ eliteLog, eliteJson })
     this.inventory = new Inventory({ eliteLog, eliteJson })
     this.cmdrStatus = new CmdrStatus({ eliteLog, eliteJson })
+    this.storage = new Storage()
 
     // These handlers depend on calls to other handlers
     this.blueprints = new Blueprints({ engineers: this.engineers, materials: this.materials, shipStatus: this.shipStatus })
@@ -192,6 +194,21 @@ class EventHandlers {
             return false
           }
           */
+        },
+        getFSSBodySignalsForSystem: ({system}) => {
+          const data = this.storage.getStorage('FSSBodySignals')
+          if(!data)
+            return null
+
+          return data[system]
+        },
+        setFSSBodySignalsForSystem: ({system, data}) => {
+          const storedData = this.storage.getStorage('FSSBodySignals')
+          if(!storedData)
+            return
+          
+          storedData[system] = data
+          this.storage.saveStorage('FSSBodySignals', storedData)
         }
       }
     }

@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react'
-import { eventListener } from 'lib/socket'
+import { eventListener, sendEvent } from 'lib/socket'
 import CopyOnClick from 'components/copy-on-click'
 import { SPACE_STATIONS, SURFACE_PORTS, PLANETARY_BASES, MEGASHIPS } from '../../../../shared/consts'
 
 export default function NavigationInspectorPanel ({ system, systemObject, setSystemObject, showHelp }) {
   const [signals, setSignals] = useState()
+
+  //get stored signals from this system on startup
+  useEffect(async () => {
+    const storedSignals = await sendEvent('getFSSBodySignalsForSystem', { name: system?.name })
+    if(!storedSignals)
+      return
+    
+    setSignals(storedSignals)
+  }, [system])
 
   useEffect(() => eventListener('newLogEntry', async (log) => {
     if (['Location', 'FSDJump'].includes(log.event)) {
@@ -20,8 +29,10 @@ export default function NavigationInspectorPanel ({ system, systemObject, setSys
       }
 
       setSignals(newSignals)
+
+      await sendEvent('setFSSBodySignalsForSystem', { name: system?.name, newSignals })
     }
-  }))
+  }, [system]))
 
   if (!system) return null
 

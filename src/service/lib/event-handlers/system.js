@@ -97,6 +97,72 @@ class System {
       // overwriting data from EDSM with with more recent local where there are
       // conflicts.
 
+      // Merge in local scan data with information about the body
+      if (system?.bodies) {
+        for (const body of system.bodies) {
+          body.signals = {
+            geological: 0,
+            biological: 0,
+            human: 0
+          }
+          
+          // Merge in body signal scan data
+          const FSSBodySignals = await this.eliteLog._query({ event: 'FSSBodySignals', BodyName: body.name }, 1)
+          if (FSSBodySignals[0]?.Signals) {
+            ;(FSSBodySignals[0]?.Signals).map(signal => {
+              if (signal?.Type === '$SAA_SignalType_Geological;') {
+                body.signals.geological = signal?.Count ?? 0
+              }
+              if (signal?.Type === '$SAA_SignalType_Biological;') {
+                body.signals.biological = signal?.Count ?? 0
+              }
+              if (signal?.Type === '$SAA_SignalType_Human;') {
+                body.signals.human = signal?.Count ?? 0
+              }
+            })
+          }
+
+          // Merge in surface scan data
+          const SAASignalsFound = await this.eliteLog._query({ event: 'SAASignalsFound', BodyName: body.name }, 1)
+          if (SAASignalsFound[0]?.Signals) {
+            ;(SAASignalsFound[0]?.Signals).map(signal => {
+              if (signal?.Type === '$SAA_SignalType_Geological;') {
+                body.signals.geological = signal?.Count ?? 0
+              }
+              if (signal?.Type === '$SAA_SignalType_Biological;') {
+                body.signals.biological = signal?.Count ?? 0
+              }
+              if (signal?.Type === '$SAA_SignalType_Human;') {
+                body.signals.human = signal?.Count ?? 0
+              }
+            })
+          }
+
+          // If we have data from a surface scan about the plants, merge it
+          if (body.signals.biological > 0 && SAASignalsFound[0]?.Genuses) {
+            body.biologicalGenuses = []
+            ;(SAASignalsFound[0]?.Genuses).map(biologicalSamples => {
+              body.biologicalGenuses.push(biologicalSamples.Genus_Localised)
+            })
+          }
+
+          // Only log discovered / mapped if in an unhabited system
+          // FIXME Suspect this logic isn't entirely correct
+          const inhabitedSystem = (system?.population > 0 || system?.stations?.length > 0 || system?.ports?.length > 0 || system?.megaships?.length > 0 || system?.settlements?.length > 0)
+          if (!inhabitedSystem) {
+            const Scan = await this.eliteLog._query({ event: 'Scan', BodyName: body.name }, 1)
+            body.discovered = Scan[0]?.WasDiscovered ?? false
+            body.mapped = Scan[0]?.WasMapped ?? false
+
+            // If there is an SAAScanComplete entry for the body, it has been scanned
+            // (even if the Scan entry says it has not, because it's old data)
+            const SAAScanComplete = await this.eliteLog._query({ event: 'SAAScanComplete', BodyName: body.name }, 1)
+            if (SAAScanComplete[0]?.BodyName) body.mapped = true
+          }
+        }
+      }
+
+
       // Generate map data from the system data
       const systemMap = new SystemMap(system)
 
@@ -133,7 +199,8 @@ class System {
         name: systemName,
         unknownSystem: true,
         isCurrentLocation,
-        scanPercentComplete
+        scanPercentComplete,
+        _cacheTimestamp: new Date().toISOString()
       }
 
       if (isCurrentLocation && currentLocation?.position && currentLocation?.address) {
@@ -152,7 +219,8 @@ class System {
         ...currentLocation,
         distance: 0,
         isCurrentLocation: true,
-        scanPercentComplete
+        scanPercentComplete,
+        _cacheTimestamp: new Date().toISOString()
       }
 
     } else {
@@ -161,7 +229,8 @@ class System {
         ...cacheResponse,
         distance: distance(cacheResponse?.position, currentLocation?.position),
         isCurrentLocation: false,
-        scanPercentComplete
+        scanPercentComplete,
+        _cacheTimestamp: new Date().toISOString()
       }
     }
   }

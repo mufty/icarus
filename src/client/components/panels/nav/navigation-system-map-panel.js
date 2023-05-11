@@ -4,7 +4,7 @@ import SystemMap from 'components/panels/nav/system-map/system-map'
 import CopyOnClick from 'components/copy-on-click'
 import factionStates from '../../../../shared/faction-states'
 
-export default function NavigationSystemMapPanel ({ system, systemObject, setSystemObject, getSystem, cmdrStatus }) {
+export default function NavigationSystemMapPanel ({ system, systemObject, setSystemObject, getSystem, cmdrStatus, rescanSystem = () => {}, rescanInProgress = false }) {
   const [showSystemDetails, setShowSystemDetails] = useState(true)
 
   if (!system) return null
@@ -56,7 +56,7 @@ export default function NavigationSystemMapPanel ({ system, systemObject, setSys
           </div>
           <div className='system-map__toolbar-background' />
           <div className='system-map__toolbar'>
-            <LocationInformation system={system} cmdrStatus={cmdrStatus} />
+            <LocationInformation system={system} cmdrStatus={cmdrStatus} rescanSystem={rescanSystem} rescanInProgress={rescanInProgress} />
             <div className='system-map__info fx-fade-in text-uppercase'>
               <span className='text-info'>
                 <i className='icarus-terminal-system-orbits' style={{ fontSize: '1.5rem', float: 'left', position: 'relative', left: '-.15rem' }} />
@@ -73,6 +73,16 @@ export default function NavigationSystemMapPanel ({ system, systemObject, setSys
                 {system.position?.[0]}<br />{system.position?.[1]}<br />{system.position?.[2]}
               </div>}
           </div>
+
+          <div className='fx-fade-in'>
+            {!system?.scanPercentComplete && 
+              <div className='system-map__system-telemetry--text text-info text-uppercase text-no-wrap' onClick={(e) => rescanSystem()}>
+                <p style={{margin: '0 4rem .15rem 0'}} className={rescanInProgress ? 'text-blink-slow' : 'text-muted'}>
+                  <i className='icarus-terminal-scan float-left' style={{fontSize: '2.5rem', marginRight: '.15rem'}}/>
+                  NO SCAN<br/>DATA
+              </p>
+            </div>}
+         </div>
         </div>
       </div>
     )
@@ -139,16 +149,28 @@ export default function NavigationSystemMapPanel ({ system, systemObject, setSys
         </div>
 
         <div className='fx-fade-in'>
-          <div className='system-map__system-telemetry text-info text-uppercase text-no-wrap'>
-            {system?.scanPercentComplete !== null && <>
-              EDSM {system?.scanPercentComplete}% <br />
-              <progress value={system?.scanPercentComplete} max='100' className='progress--info progress--border' style={{margin: '.15rem 0 -.1rem 0', height: '1.5rem'}}/>
-            </>}
-            {!system?.scanPercentComplete && <p style={{margin: '0 0 .15rem 0'}} className='text-muted'>
-              Telemetry<br/>
-              From EDSM
-            </p>}
-          </div>
+          {system?.scanPercentComplete && system?.scanPercentComplete !== 100 &&
+            <div className={`system-map__system-telemetry--progress text-uppercase text-secondary ${rescanInProgress ? 'text-blink-slow' : ''}`} onClick={(e) => rescanSystem()}>
+              <i className='icarus-terminal-scan float-left' style={{fontSize: '2.5rem', marginLeft: '.25rem'}}/>
+              <div style={{position: 'absolute', right: 0}}>
+                EDSM {system?.scanPercentComplete}% <br />
+                <progress value={system?.scanPercentComplete} max='100' className='progress--secondary progress--border' style={{margin: '.15rem 0 -.1rem 0', height: '1.25rem', width: '5.5rem'}}/>
+              </div>
+          </div>}
+          {system?.scanPercentComplete === 100 &&
+            <div className='system-map__system-telemetry--text text-primary text-uppercase text-no-wrap'  onClick={(e) => rescanSystem()}>
+            <p style={{margin: '0 4rem .15rem 0'}} className={rescanInProgress ? 'text-blink-slow' : 'text-muted'}>
+              <i className='icarus-terminal-scan float-left' style={{fontSize: '2.5rem', marginRight: '.15rem'}}/>
+              SYSTEM<br/>SCANNED
+          </p>
+          </div>}
+          {!system?.scanPercentComplete && 
+            <div className='system-map__system-telemetry--text text-info text-uppercase text-no-wrap' onClick={(e) => rescanSystem()}>
+              <p style={{margin: '0 4rem .15rem 0'}} className={rescanInProgress ? 'text-blink-slow' : 'text-muted'}>
+                <i className='icarus-terminal-scan float-left' style={{fontSize: '2.5rem', marginRight: '.15rem'}}/>
+                NO SCAN<br/>DATA
+            </p>
+          </div>}
           {system.position &&
             <div className='system-map__system-position text-info text-muted text-no-wrap'>
               {system.position?.[0]}, {system.position?.[1]}, {system.position?.[2]}
@@ -157,7 +179,7 @@ export default function NavigationSystemMapPanel ({ system, systemObject, setSys
 
         <div className='system-map__toolbar-background' />
         <div className='system-map__toolbar'>
-          <LocationInformation system={system} cmdrStatus={cmdrStatus} />
+          <LocationInformation system={system} cmdrStatus={cmdrStatus}/>
           <div className='system-map__info fx-fade-in text-uppercase'>
             <span className='text-info'>
               <i className='icarus-terminal-system-orbits' style={{ fontSize: '1.5rem', float: 'left', position: 'relative', left: '-.15rem' }} />
@@ -183,27 +205,74 @@ function PointsOfInterest({ system }) {
   const asteroidBases = system?.spaceStations?.filter(station => station?.type === 'Asteroid base')?.length ?? 0
   const outposts = system?.spaceStations?.filter(station => station?.type === 'Outpost')?.length ?? 0
 
+  const inhabitedSystem = (system.spaceStations.length > 0 || system.planetaryPorts.length > 0 || system.megaships.length > 0 || system.settlements.length > 0)
+
+  if (inhabitedSystem) {
+    return (
+      <div className='system-map__info--icons'>
+        <div style={{ width: '100%' }}>
+          {coriolisStarports > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-coriolis-starport' /><span className='count'>{coriolisStarports}</span></span>}
+          {ocellusStarports > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-ocellus-starport' /><span className='count'>{ocellusStarports}</span></span>}
+          {orbisStarports > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-orbis-starport' /><span className='count'>{orbisStarports}</span></span>}
+          {asteroidBases > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-asteroid-base' /><span className='count'>{asteroidBases}</span></span>}
+          {outposts > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-outpost' /><span className='count'>{outposts}</span></span>}
+          {system.megaships.length > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-megaship' /><span className='count'>{system.megaships.length}</span></span>}
+          {system.planetaryPorts.length > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-planetary-port' /><span className='count'>{system.planetaryPorts.length}</span></span>}
+          {system.settlements.length > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-settlement' /><span className='count'>{system.settlements.length}</span></span>}
+        </div>
+      </div>
+    )
+  }
+  
+  const biologicalSignals = system.bodies.reduce((total, body) => total + (body?.signals?.biological ?? 0), 0)
+
+  const geologicalSignals = system.bodies.reduce((total, body) => {
+    let geologicalSignals = body?.signals?.geological ?? 0
+
+    // If no geological signals BUT the planet is landable *and* a body is known
+    // to have volcanic activity then it must be the source of *at least* one
+    // geological signal
+    if (geologicalSignals === 0 && body.isLandable && body.volcanismType && body.volcanismType !== 'No volcanism') {
+      geologicalSignals++
+    }
+
+    return total + geologicalSignals
+  }, 0)
+
+  const humanSignals = system.bodies.reduce((total, body) => total + (body?.signals?.human ?? 0), 0)
+  const earthlikeWorlds = system.bodies.reduce((total, body) => body?.subType?.toLowerCase() === 'earth-like world' ? total + 1 : total, 0)
+  const waterWorlds = system.bodies.reduce((total, body) => body?.subType?.toLowerCase() === 'water world' ? total + 1 : total, 0)
+  const ammoniaWorlds = system.bodies.reduce((total, body) => body?.subType?.toLowerCase() === 'ammonia world' ? total + 1 : total, 0)
+  const terraformableWorlds = system.bodies.reduce((total, body) => (body.terraformingState && body.terraformingState !== 'Not terraformable' && body.terraformingState !== 'Terraformed') ? total + 1 : total, 0)
+  const highValueGasGiants = system.bodies.reduce((total, body) => body?.subType?.toLowerCase()?.includes('class ii gas giant') ? total + 1 : total, 0)
+  const metalRichPlanets = system.bodies.reduce((total, body) => body?.subType?.toLowerCase() === 'metal rich' ? total + 1 : total, 0)
+
+  const interestingFeatures = (biologicalSignals > 0 || geologicalSignals > 0 || humanSignals > 0 || earthlikeWorlds > 0 || waterWorlds > 0 || ammoniaWorlds > 0 || terraformableWorlds > 0 || highValueGasGiants > 0 || metalRichPlanets > 0)
+
+  if (interestingFeatures) {
+    return (
+      <div className='system-map__info--icons'>
+        <div style={{ width: '100%' }}>
+          {humanSignals > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-poi' /><span className='count'>{humanSignals} {humanSignals === 1 ? 'Human Origin Signal' : 'Human Origin Signals'}</span></span></h3>}
+          {biologicalSignals > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-plant' /><span className='count'>{biologicalSignals} {biologicalSignals === 1 ? 'Biological Signal' : 'Biological Signals'}</span></span></h3>}
+          {geologicalSignals > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-volcanic' /><span className='count'>{geologicalSignals} {geologicalSignals === 1 ? 'Geological Signal' : 'Geological Signals'}</span></span></h3>}
+          {earthlikeWorlds > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-earthlike' /><span className='count'>{earthlikeWorlds} {earthlikeWorlds === 1 ? 'Earth-like World' : 'Earth-like Worlds'}</span></span></h3>}
+          {waterWorlds > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-water-world' /><span className='count'>{waterWorlds} {waterWorlds === 1 ? 'Water World' : 'Water Worlds'}</span></span></h3>}
+          {ammoniaWorlds > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-ammonia-world' /><span className='count'>{ammoniaWorlds} {ammoniaWorlds === 1 ? 'Ammonia World' : 'Ammonia Worlds'}</span></span></h3>}
+          {terraformableWorlds > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-terraformable' /><span className='count'>{terraformableWorlds} {terraformableWorlds === 1 ? 'Terraformable Planet' : 'Terraformable Planets'}</span></span></h3>}
+          {highValueGasGiants > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-gas-giant' /><span className='count'>{highValueGasGiants} {highValueGasGiants === 1 ? 'Class II Gas Giant' : 'Class II Gas Giants'}</span></span></h3>}
+          {metalRichPlanets > 0 && <h3 className='text-primary'><span className='system-map__info-icon'><i className='icon icarus-terminal-planet-high-metal-value' /><span className='count'>{metalRichPlanets} {metalRichPlanets === 1 ? 'Metal Rich Planet' : 'Metal Rich Planets'}</span></span></h3>}
+       </div>
+      </div>
+    )
+  }
+
   return (
-    <>
-      {((system.spaceStations.length > 0 || system.planetaryPorts.length > 0 || system.megaships.length > 0 || system.settlements.length > 0))
-        ? <div className='system-map__info--icons'>
-          <div style={{ width: '100%' }}>
-            {coriolisStarports > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-coriolis-starport' /><span className='count'>{coriolisStarports}</span></span>}
-            {ocellusStarports > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-ocellus-starport' /><span className='count'>{ocellusStarports}</span></span>}
-            {orbisStarports > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-orbis-starport' /><span className='count'>{orbisStarports}</span></span>}
-            {asteroidBases > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-asteroid-base' /><span className='count'>{asteroidBases}</span></span>}
-            {outposts > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-outpost' /><span className='count'>{outposts}</span></span>}
-            {system.megaships.length > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-megaship' /><span className='count'>{system.megaships.length}</span></span>}
-            {system.planetaryPorts.length > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-planetary-port' /><span className='count'>{system.planetaryPorts.length}</span></span>}
-            {system.settlements.length > 0 && <span className='system-map__info-icon'><i className='icon icarus-terminal-settlement' /><span className='count'>{system.settlements.length}</span></span>}
-          </div>
-          </div>
-        : <div className='system-map__info--icons text-uppercase text-primary text-muted'>No stations / settlements</div>}
-    </>
-  )
+    <h3 className='system-map__info--icons text-uppercase text-info text-muted'><span className='system-map__info-icon'><span className='count'>No notable signals</span></span></h3>
+   )
 }
 
-function LocationInformation ({ system, cmdrStatus }) {
+function LocationInformation ({ system, cmdrStatus, rescanSystem, rescanInProgress }) {
   return (
     <div className='system-map__location fx-fade-in hidden-small'>
       {system?.distance > 0 &&
@@ -237,10 +306,6 @@ function LocationInformation ({ system, cmdrStatus }) {
                 )
               : 'Current location'}
           </h3>
-        </div>}
-      {system.isCurrentLocation === true && cmdrStatus?.flags?.fsdJump === true &&
-        <div className='text-center-vertical'>
-          <h3 className='text-blink-slow text-info' style={{ background: 'transparent' }}>Frame Shift Drive Active</h3>
         </div>}
     </div>
   )

@@ -3,7 +3,7 @@ import { eventListener, sendEvent } from 'lib/socket'
 import CopyOnClick from 'components/copy-on-click'
 import { SPACE_STATIONS, SURFACE_PORTS, PLANETARY_BASES, MEGASHIPS } from '../../../../shared/consts'
 
-export default function NavigationInspectorPanel ({ system, systemObject, setSystemObject, showHelp }) {
+export default function NavigationListPanel ({ system, systemObject, setSystemObject, showHelp }) {
   const [signals, setSignals] = useState()
 
   async function initData (system) {
@@ -159,6 +159,7 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject, 
   }
 
   const isLandable = systemObject.isLandable || SPACE_STATIONS.concat(MEGASHIPS).includes(systemObject.type) || PLANETARY_BASES.includes(systemObject.type)
+  const isAtmospheric = systemObject.atmosphereComposition && !systemObject?.subType?.toLowerCase()?.includes('gas giant')
 
   // TODO Move to icon class
   let iconClass = 'icon system-object-icon icarus-terminal-'
@@ -182,7 +183,19 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject, 
       iconClass += 'orbis-starport'
       break
     case 'planet':
-      iconClass += 'planet'
+      if (isLandable) {
+        if (isAtmospheric) {
+          iconClass += 'planet-atmosphere-landable'
+        } else {
+          iconClass += 'planet-landable'
+        }
+      } else {
+        if (isAtmospheric) {
+          iconClass += 'planet-atmosphere'
+        } else {
+          iconClass += 'planet'
+        }
+      }
       break
     case 'mega ship':
       iconClass += 'megaship'
@@ -206,12 +219,11 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject, 
           <i className={iconClass} />
           {systemObject.label
             ? <>
-              <span className='visible-medium'>{systemObject.label}</span>
-              <span className='hidden-medium'>{systemObject.name}</span>
+                <span className='visible-medium'>{systemObject.label}</span>
+                <span className='hidden-medium'>{systemObject.name}</span>
               </>
             : systemObject.name}
           <span className={systemObject.isLandable ? 'text-secondary' : ''}>
-            {systemObject.isLandable === true && <i title='Landable' className='float-right icon icarus-terminal-planet-lander' />}
             {(systemObject.atmosphereComposition && !systemObject?.subType?.toLowerCase()?.includes('gas giant')) && <i className='float-right icon icarus-terminal-planet-atmosphere' />}
             {((systemObject.volcanismType && systemObject.volcanismType !== 'No volcanism') || systemObject.Geological) && <i className='float-right icon icarus-terminal-planet-volcanic'><span className='text-superscript'>{systemObject.Geological?.Count}</span></i>}
             {systemObject.terraformingState && systemObject.terraformingState !== 'Not terraformable' && systemObject.terraformingState !== 'Terraformed' && <i className='float-right icon icarus-terminal-planet-terraformable' />}
@@ -223,6 +235,7 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject, 
             {systemObject?.subType?.toLowerCase()?.includes('water-based life') && <i className='float-right icon icarus-terminal-planet-water-based-life' />}
             {systemObject?.subType?.toLowerCase()?.includes('ammonia-based life') && <i className='float-right icon icarus-terminal-planet-ammonia-based-life' />}
             {(systemObject?.subType?.toLowerCase()?.includes('with life') || systemObject.Biological) && <i className='float-right icon icarus-terminal-planet-life'><span className='text-superscript'>{systemObject.Biological?.Count}</span></i>}
+            {systemObject?.signals?.biological > 0 && <i className='float-right icon icarus-terminal-plant' />}
             {systemObject.rings && <i className='float-right icon icarus-terminal-planet-ringed' />}
             {(systemObject?.subType?.toLowerCase() === 'earth-like world'
               || systemObject?.subType?.toLowerCase() === 'water world'

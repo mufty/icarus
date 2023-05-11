@@ -15,6 +15,7 @@ export default function NavMapPage () {
   const [system, setSystem] = useState()
   const [systemObject, setSystemObject] = useState()
   const [cmdrStatus, setCmdrStatus] = useState()
+  const [rescanInProgress, setRescanInProgress] = useState(false)
 
   const search = async (searchInput) => {
     const newSystem = await sendEvent('getSystem', { name: searchInput })
@@ -27,6 +28,14 @@ export default function NavMapPage () {
     const newSystem = await sendEvent('getSystem', { name: systemName, useCache })
     if (!newSystem) return
     setSystemObject(null)
+    setSystem(newSystem)
+  }
+
+  const rescanSystem = async () => {
+    setRescanInProgress(true)
+    const newSystem = await sendEvent('getSystem', { name: system?.name, useCache: false })
+    setRescanInProgress(false)
+    if (!newSystem) return
     setSystem(newSystem)
   }
 
@@ -76,15 +85,23 @@ export default function NavMapPage () {
       setSystemObject(null) // Clear selected object
       setSystem(newSystem)
     }
-    if (['FSSDiscoveryScan', 'FSSAllBodiesFound', 'Scan'].includes(log.event)) {
+    if (['FSSDiscoveryScan', 'FSSAllBodiesFound', 'SAASignalsFound', 'FSSBodySignals', 'Scan'].includes(log.event)) {
       const newSystem = await sendEvent('getSystem', { name: system?.name, useCache: false })
-      if (newSystem) setSystem(newSystem)
+      // Update system object so NavigationInspectorPanel is also updated
+      if (newSystem) {
+        if (systemObject?.name) {
+          const newSystemObject = newSystem.objectsInSystem.filter(child => child.name.toLowerCase() === systemObject.name?.toLowerCase())[0]
+          setSystemObject(newSystemObject)
+        }
+        setSystem(newSystem)
+      }
     }
-  }), [system])
+  }), [system, systemObject])
 
   useEffect(() => eventListener('gameStateChange', async (log) => {
-    setCmdrStatus(await sendEvent('getCmdrStatus'))
+    //setCmdrStatus(await sendEvent('getCmdrStatus'))
   }))
+  
 
   useEffect(() => {
     if (!router.isReady) return
@@ -101,7 +118,7 @@ export default function NavMapPage () {
   return (
     <Layout connected={connected} active={active} ready={ready} loader={!componentReady}>
       <Panel layout='full-width' navigation={NavPanelNavItems('Map', query)} search={search} exit={system?.isCurrentLocation === false ? () => getSystem() : null}>
-        <NavigationSystemMapPanel system={system} systemObject={systemObject} setSystemObject={setSystemObject} getSystem={getSystem} cmdrStatus={cmdrStatus} />
+        <NavigationSystemMapPanel system={system} systemObject={systemObject} setSystemObject={setSystemObject} getSystem={getSystem} cmdrStatus={cmdrStatus} rescanSystem={rescanSystem} rescanInProgress={rescanInProgress}/>
         <NavigationInspectorPanel systemObject={systemObject} setSystemObjectByName={setSystemObjectByName} />
       </Panel>
     </Layout>

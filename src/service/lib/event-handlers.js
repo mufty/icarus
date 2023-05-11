@@ -120,6 +120,10 @@ class EventHandlers {
         //     return null
         //   }
         // },
+        testMessage: ({name, message}) => {
+          // Method to simulate messages, intended for developers
+          if (name !== 'testMessage') broadcastEvent(name, message)
+        },
         testVoice: ({ voice }) => {
           // Escape voice name when passing as text as precaution to clean
           // input (NB: voice name argument is checked internally)

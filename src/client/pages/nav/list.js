@@ -72,11 +72,18 @@ export default function NavListPage () {
       setSystemObject(null) // Clear selected object
       setSystem(newSystem)
     }
-    if (['FSSDiscoveryScan', 'FSSAllBodiesFound', 'Scan'].includes(log.event)) {
+    if (['FSSDiscoveryScan', 'FSSAllBodiesFound', 'SAASignalsFound', 'FSSBodySignals', 'Scan'].includes(log.event)) {
       const newSystem = await sendEvent('getSystem', { name: system?.name, useCache: false })
-      if (newSystem) setSystem(newSystem)
+      // Update system object so NavigationInspectorPanel is also updated
+      if (newSystem) {
+        if (systemObject?.name) {
+          const newSystemObject = newSystem.objectsInSystem.filter(child => child.name.toLowerCase() === systemObject.name?.toLowerCase())[0]
+          setSystemObject(newSystemObject)
+        }
+        setSystem(newSystem)
+      }
     }
-  }), [system])
+  }), [system, systemObject])
 
   useEffect(() => {
     if (!router.isReady) return

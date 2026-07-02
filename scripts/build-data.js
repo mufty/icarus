@@ -15,104 +15,28 @@ const ROOT_INPUT_DATA_DIR = path.join(RESOURCES_DIR, 'data')
 const ROOT_OUTPUT_DATA_DIR = path.join('src', 'service', 'data')
 
 ;(async () => {
-  // await codexArticles()
-  fdevids()
+  await fdevids()
   coriolisDataBlueprints()
   coriolisDataModules()
   materialUses()
+  await codexArticles()
 })()
 
-async function codexArticles () {
-  const pathToFile = path.join(RESOURCES_DIR, 'data', 'fandom', 'elite_dangerousfandomcom-20220527-wikidump', 'elite_dangerousfandomcom-20220527-current.xml')
-  const xml = fs.readFileSync(pathToFile).toString()
-  const wikiData = (await xmlParser.parseStringPromise(xml)).mediawiki
-  const codexIndex = {}
-  const codexRedirects = {}
-  const codexPages = wikiData.page.reduce((response, item) => {
-    const page = item
-    const title = page.title[0].trim()
-    const id = `${page.id}-${title.toLowerCase().replace(/[^A-z0-9\(\)\'-]/g, '_').replace(/(__+)/g, '_')}`
-
-    // Ignore Talk and User pages
-    if (title.startsWith('Talk:') || title.startsWith('User:')) return response
-
-    const markdown = page.revision[0].text[0]._
-    let text = wikiTextParser.parse(markdown || '').replace(/\r/g, '')
-
-    // Ignore blank pages
-    if (!markdown || !text) return response
-
-    if (text.toLowerCase().startsWith('- redirect ') || text.toLowerCase().includes('__staticredirect__')) {
-      const redirectTo = text
-        .replace(/- REDIRECT /i, '')
-        .replace(/__STATICREDIRECT__/i, '')
-        .replace(/\n(.*)?/, '')
-        .replace(/\r(.*)?/, '')
-        .trim()
-
-      // Ignore broken redirects
-      if (!redirectTo) return response
-
-      // Add to list of redirects
-      codexRedirects[title] = redirectTo
-
-      return response
-    }
-
-    // Clean up text / omit certain sections
-    text = text
-      .replace(/\n\n- /img, '\n- ')
-      .replace(/\n\nGallery\n(.*?)\n/im, '\n')
-      .replace(/\n\nVideos\n(.*?)\n/im, '\n')
-      .replace(/\n\nReferences\n(.*?)\n/im, '\n')
-      .replace(/\nCategory:(.*?)\n/img, '\n')
-      .replace(/\nCategory:(.*?)$/img, '\n')
-      .replace(/\n([a-z]{2}):(.*?)\n/img, '\n')
-      .replace(/\n([a-z]{2}):(.*?)$/img, '\n')
-      .trim()
-
-    response.push({
-      id,
-      title,
-      timestamp: page.revision[0].timestamp[0],
-      contributor: {
-        id: page.revision[0].contributor[0]?.id?.[0] ?? null,
-        name: page.revision[0].contributor[0]?.username?.[0] ?? null
-      },
-      text
-    })
-
-    codexIndex[title] = id
-
-    return response
-  }, [])
-
-  // Write files to disk
-  const codexDir = path.join(ROOT_OUTPUT_DATA_DIR, 'codex')
-  fs.mkdirSync(codexDir, { recursive: true })
-
-  codexPages.forEach(codexPage => {
-    const filename = path.join(codexDir, `${codexPage.id}.json`)
-    fs.writeFileSync(filename, JSON.stringify(codexPage, null, 2))
-  })
-
-  fs.writeFileSync(path.join(codexDir, '_index.json'), JSON.stringify({
-    index: codexIndex,
-    redirects: codexRedirects
-  }, null, 2))
-}
-
 function fdevids () {
-  // https://github.com/EDCD/FDevIDs
-  const dataDir = 'edcd/fdevids'
-  fs.mkdirSync(`${ROOT_OUTPUT_DATA_DIR}/${dataDir}`, { recursive: true })
-  glob(`${ROOT_INPUT_DATA_DIR}/${dataDir}/*.csv`, {}, async (error, files) => {
-    if (error) return console.error(error)
-    files.forEach(async (name) => {
-      const jsonOutput = await csv().fromFile(name)
-      const basename = path.basename(name, '.csv')
-      fs.writeFileSync(`${ROOT_OUTPUT_DATA_DIR}/${dataDir}/${basename}.json`, JSON.stringify(jsonOutput, null, 2))
-    })
+  return new Promise((resolve, reject) => {
+      // This a sync task, as codexArticles depends on it's output
+      // Data from https://github.com/EDCD/FDevIDs
+      const dataDir = 'edcd/fdevids'
+      fs.mkdirSync(`${ROOT_OUTPUT_DATA_DIR}/${dataDir}`, { recursive: true })
+      glob(`${ROOT_INPUT_DATA_DIR}/${dataDir}/*.csv`, {}, async (error, files) => {
+        if (error) return console.error(error)
+        for (const pathToFile of files) {
+          const jsonOutput = await csv().fromFile(pathToFile)
+          const basename = path.basename(pathToFile, '.csv')
+          fs.writeFileSync(`${ROOT_OUTPUT_DATA_DIR}/${dataDir}/${basename}.json`, JSON.stringify(jsonOutput, null, 2))
+        }
+        resolve()
+      })
   })
 }
 
@@ -234,6 +158,175 @@ function materialUses () {
   })
 
   fs.writeFileSync(`${ROOT_OUTPUT_DATA_DIR}/material-uses.json`, JSON.stringify(materialUses, null, 2))
+}
+
+
+async function codexArticles () {
+  const pathToFile = path.join(RESOURCES_DIR, 'data', 'fandom', 'elite_dangerousfandomcom-20220527-wikidump', 'elite_dangerousfandomcom-20220527-current.xml')
+  const xml = fs.readFileSync(pathToFile).toString()
+  const wikiData = (await xmlParser.parseStringPromise(xml)).mediawiki
+  const codexIndex = {}
+  const codexRedirects = {}
+  const codexPages = wikiData.page.reduce((response, item) => {
+    const page = item
+    const title = page.title[0].trim()
+    const id = `${page.id}-${title.toLowerCase().replace(/[^A-z0-9\(\)\'-]/g, '_').replace(/(__+)/g, '_')}`
+
+    // Ignore Talk and User pages
+    if (title.startsWith('Talk:') || title.startsWith('User:')) return response
+
+    const rawText = page.revision[0].text[0]._
+    const parsedText = wikiTextParser.parse(rawText || '').replace(/\r/g, '')
+
+    // Ignore blank pages
+    if (!rawText || !parsedText) return response
+
+    if (rawText.toLowerCase().startsWith('- redirect ') || parsedText.toLowerCase().includes('__staticredirect__')) {
+      const redirectTo = parsedText
+        .replace(/- REDIRECT /i, '')
+        .replace(/__STATICREDIRECT__/i, '')
+        .replace(/\n(.*)?/, '')
+        .replace(/\r(.*)?/, '')
+        .trim()
+
+      // Ignore broken redirects
+      if (!redirectTo) return response
+
+      // Add to list of redirects
+      codexRedirects[title] = redirectTo
+
+      return response
+    }
+
+    // These regular expressions don't need to be clever or over engineered,
+    // it's not runtime code and it's just an ETL job for a hobby project
+    const rawQuotes = rawText
+      .replace(/\r\n/img, '')
+      .match(/{{quote(.*?)}}/img)
+
+    const quote = rawQuotes?.[0]
+      .replace(/^{{(.*?)\|/, '')
+      .replace(/\|(.*?)}}$/, '')
+      .replace(/<!--(.*?)-->/, '')
+      .replace(/\[\[/, '')
+      .replace(/\]\]/, '')
+      .replace(/(<br>+)/img, ' ')
+      .replace(/(<br\/>+)/img, ' ')
+      .replace(/[ ]{2,}/img, ' ') // Turn two or more spaces into a single space
+      .replace(/Painite,CaZrAl<sub>9<\/sub>O<sub>15<\/sub>\(BO<sub>3<\/sub>\)\./, '') // This is just garbage data in the entry for Panite
+      .trim()
+      ?? null
+
+    // Clean up text / omit certain sections
+    const text = parsedText
+      .replace(/\n\n- /img, '\n- ')
+      .replace(/\n\nGallery\n(.*?)\n/im, '\n')
+      .replace(/\n\nVideos\n(.*?)\n/im, '\n')
+      .replace(/\n\nReferences\n(.*?)\n/im, '\n')
+      .replace(/\nCategory:(.*?)\n/img, '\n')
+      .replace(/\nCategory:(.*?)$/img, '\n')
+      .replace(/\n([a-z]{2}):(.*?)\n/img, '\n')
+      .replace(/\n([a-z]{2}):(.*?)$/img, '\n')
+      .trim()
+
+    // Experiment at extracting information about promiment systems
+    //if (rawText.includes('| power      = ')) console.log(title.trim(), '-', text.split("\n")?.[0]?.replace(/[ ]{2,}/img, ' ')?.trim())
+
+    response.push({
+      id,
+      title,
+      timestamp: page.revision[0].timestamp[0],
+      contributor: {
+        id: page.revision[0].contributor[0]?.id?.[0] ?? null,
+        name: page.revision[0].contributor[0]?.username?.[0] ?? null
+      },
+      rawText,
+      text,
+      quote
+    })
+
+    codexIndex[title] = id
+
+    return response
+  }, [])
+
+  // Write files to disk
+  // const codexDir = path.join(ROOT_OUTPUT_DATA_DIR, 'codex')
+  // fs.mkdirSync(codexDir, { recursive: true })
+
+  // codexPages.forEach(codexPage => {
+  //   const filename = path.join(codexDir, `${codexPage.id}.json`)
+  //   fs.writeFileSync(filename, JSON.stringify(codexPage, null, 2))
+  // })
+
+  // fs.writeFileSync(path.join(codexDir, '_index.json'), JSON.stringify({
+  //   index: codexIndex,
+  //   redirects: codexRedirects
+  // }, null, 2))
+
+  // This requires the the fdevids() step to have been run at least once,
+  // which is why this step is configured run after it in this script
+  const pathToCommodities = `${ROOT_OUTPUT_DATA_DIR}/edcd/fdevids/commodity.json`
+  const commodities = JSON.parse(fs.readFileSync(pathToCommodities))
+
+  const pathToRareCommodities = `${ROOT_INPUT_DATA_DIR}/rare-commodities-with-count.json`
+  const rareCommodities = JSON.parse(fs.readFileSync(pathToRareCommodities))
+
+  const commodityDescriptions = {}
+  const allCommodities = {}
+  codexPages.forEach(codexPage => {
+    if (!codexPage?.quote) return
+
+    // These are names that are different in the wiki to how they are listed in the fdevids file
+    // (even after attempting to clean up errors in the file, not 100% sure which name is
+    // canonical for these cases)
+    if (codexPage.title == 'Galactic Travel Guides') codexPage.title = 'Galactic Travel Guide'
+    if (codexPage.title == 'Political Prisoner') codexPage.title = 'Political Prisoners'
+    if (codexPage.title == 'Hostage') codexPage.title = 'Hostages'
+   
+    commodities.map(commodity => {
+      const commoditySymbol = commodity.symbol.toLowerCase()
+      let commodityDescription
+
+      if (commodity.name.replace(/ /img, '').toLowerCase() === codexPage.title.replace(/ /img, '').toLowerCase()) {
+        commodityDescription = codexPage.quote
+      }
+
+      // Add or override description data from the wiki
+      // Use to fix typos or to extend to include missing data
+      if (commoditySymbol == 'cryolite') commodityDescription = 'Used in a range of applications, including insecticides, pesticides, fireworks and as a solvent for aluminium oxide.'
+      if (commoditySymbol == 'crystallinespheres') commodityDescription = 'Transparent spheres crafted from the finest crystal and containing a clear liquid full of snow that swirls when shaken.'
+      if (commoditySymbol == 'gallium') commodityDescription = 'Gallium, Ga, atomic number 31. Melting point 303K. It is a soft silvery metal at human room temperature, but melts in the human hand. It is used as a key component in semiconductors and in lasers.'
+      if (commoditySymbol == 'autofabricators') commodityDescription = 'High speed, low cost fabricators that can build almost any design out of basic resources.'
+
+      if (commodityDescription) {
+        commodity.description = commodityDescription
+        commodityDescriptions[commoditySymbol] = commodityDescription
+      }
+
+      allCommodities[commoditySymbol] = commodity
+    })
+
+    rareCommodities.map(rareCommodity => {
+      if (rareCommodity.name.replace(/ /img, '').toLowerCase() === codexPage.title.replace(/ /img, '').toLowerCase()) {
+        rareCommodity.description = codexPage.quote
+        commodityDescriptions[rareCommodity.symbol.toLowerCase()] = codexPage.quote
+      }
+      rareCommodity.rare = true
+      allCommodities[rareCommodity.symbol.toLowerCase()] = rareCommodity
+    })
+  })
+
+  Object.keys(allCommodities).forEach(name => {
+    const commodity = allCommodities[name]
+    if (!commodity.description || commodity.description == '') console.warn(`Warning: Commodity "${commodity.symbol}" has no description`)
+  })
+
+  const allCommoditiesSortedList = {} 
+  Object.keys(allCommodities).sort().forEach(k => allCommoditiesSortedList[k] = allCommodities[k])
+
+  fs.writeFileSync(`${ROOT_OUTPUT_DATA_DIR}/commodity-descriptions.json`, JSON.stringify(commodityDescriptions, null, 2))
+  fs.writeFileSync(`${ROOT_OUTPUT_DATA_DIR}/all-commodites.json`, JSON.stringify(allCommoditiesSortedList, null, 2))
 }
 
 function getEngineeringPropertyName (engineeringPropertyName) {

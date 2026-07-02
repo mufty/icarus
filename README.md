@@ -19,7 +19,7 @@ You can run ICARUS Terminal in a native window, on multiple windows/displays, as
 
 <p align="center">
   <a href="https://github.com/iaincollins/icarus/releases">
-    <img alt="Download" src="https://user-images.githubusercontent.com/595695/156449436-a2452073-ca27-4916-b21f-6eb1e7370bf2.svg" height="80" width="auto"/>
+    <img alt="Download" src="https://github.com/iaincollins/icarus/assets/595695/ee98eb94-f293-4eb5-8230-b7a75f17ea44" height="80" width="auto"/>
   </a>
 </p>
 
@@ -105,10 +105,21 @@ ICARUS Terminal uses imagery from/inspired by Elite Dangerous, which is copyrigh
 
 Thank you to all those who have created and supported libraries on which this software depends and to Frontier Developments plc for supporting third party tools.
 
-## Donations
+## Support
 
-People have asked if I take donations for the project. I don't take donations, but I do appreciate folks asking. If you want to support development of ICARUS Terminal, you can always pay a visit to the [Ardent Pioneer (V9G-G7Z)](https://inara.cz/elite/station/490914/). Selling Tritium to the carrier is very helpful and always appreciated.
+People have asked if I take donations for the project - I don't donations, but 
+I do appreciate the offer.
 
-You can use Inara to [find out which system the Ardent Pioneer is currently in](https://inara.cz/elite/station/490914/). Before you visit you might want to [check out what commodities are currently being traded](https://inara.cz/elite/station-market/490914/). You might also want to chat to the bartender to see if there is anything they are looking for (or have to trade).
+If you want to support development of ICARUS Terminal, the best way is to visit 
+the [Ardent Pioneer (V9G-G7Z)](https://inara.cz/elite/station/490914/).
 
-Note: While docked you can also sell exploration data, biological samples and refuel/rearm/repair your ship. All commidity buy orders are at least 10% above galatic average prices, so you should be able to make a small profit. Trades, especially selling Tritium, directly supports development as it means I can spend more adding features to ICARUS Terminal and travelling the galaxy to test them out!
+Selling Tritium to the carrier directly supports development as it means I can 
+spend more time adding features to ICARUS Terminal and travelling the galaxy to 
+test them out!
+
+You can use Inara to [find out which system the Ardent Pioneer is currently in](https://inara.cz/elite/station/490914/) and see if it's anywhere near you.
+
+Before you visit you might want to [check out what commodities are currently 
+being traded](https://inara.cz/elite/station-market/490914/). You might also 
+want to chat to the bartender to see what they are looking for!
+

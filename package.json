@@ -1,6 +1,6 @@
 {
   "name": "icarus",
-  "version": "0.21.0",
+  "version": "0.23.0",
   "description": "ICARUS Terminal for Elite Dangerous",
   "scripts": {
     "build": "npm run build:client && npm run build:app && npm run build:service && npm run build:package",
@@ -60,5 +60,9 @@
     "serve-static": "^1.14.1",
     "ws": "^8.2.3",
     "yargs": "^17.2.1"
+  },
+  "engines": {
+    "npm": "9.6.7",
+    "node": "18.17.1"
   }
 }

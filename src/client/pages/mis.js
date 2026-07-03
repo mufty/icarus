@@ -164,15 +164,6 @@ export default function MisPage () {
       default:
         break
     }
-
-    //TODO
-    /*setMissionEntries(prevState => [newLogEntry, ...prevState])
-    // If no log row is currently selected (focus is not on a table row) then
-    // display the most recent log - otherwise leaves it displaying whatever is
-    // currently selected.
-    if (document.activeElement.tagName !== 'TR') {
-      setSelectedLogEntry(newLogEntry)
-    }*/
   }), [])
 
   return (

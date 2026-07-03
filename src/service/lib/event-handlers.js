@@ -88,8 +88,34 @@ class EventHandlers {
             return await this.eliteLog.getNewest(count)
           }
         },
-        getMissions: async () => {
-          return await this.eliteLog.getEvent("Missions")
+        getActiveMissions: async (p) => {
+          let allMissions = await this.eliteLog.getEvents("Missions", p.count)
+          let abandonedMissions = await this.eliteLog.getEvents("MissionAbandoned", p.count)
+          let failedMissions = await this.eliteLog.getEvents("MissionFailed", p.count)
+
+          if(allMissions && allMissions.Active) {
+            let activeMissions = {
+              Active: [],
+              Failed: [],
+              Complete: [],
+              Abandoned: []
+            }
+
+            for(let mission of allMissions.Active) {
+              let missionId = mission.MissionID
+              let missionTimetamp = new Date(mission.timestamp).getTime()
+              let isAbandoned = abandonedMissions.some(abandoned => abandoned.MissionID === missionId && new Date(abandoned.timestamp).getTime() > missionTimetamp)
+              let isFailed = failedMissions.some(failed => failed.MissionID === missionId && new Date(failed.timestamp).getTime() > missionTimetamp)
+
+              if(!isAbandoned && !isFailed) {
+                activeMissions.Active.push(mission)
+              }
+            }
+            
+            return activeMissions
+          }
+          
+          return null
         },
         getSystem: (args) => this.system.getSystem(args),
         getShipStatus: (args) => this.shipStatus.getShipStatus(args),

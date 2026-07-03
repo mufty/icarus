@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { eliteDateTime, ADD_YEARS_IN_FUTURE } from 'lib/format'
+import { useState, useEffect, useRef } from 'react'
 import animateTableEffect from 'lib/animate-table-effect'
 import Layout from 'components/layout'
 import Panel from 'components/panel'
@@ -11,11 +10,14 @@ export default function MisPage () {
   const { connected, active, ready } = useSocket()
   const [componentReady, setComponentReady] = useState(false)
   const [missionEntries, setMissionEntries] = useState([])
-  const [selectedMissionEntry, setSelectedMissionEntry] = useState()
+  const [selectedMissionEntry, setSelectedMissionEntry] = useState(null)
+
+  const selectedMissionEntryRef = useRef(selectedMissionEntry);
+  const missionEntriesRef = useRef(missionEntries);
 
   function removeMission(mission) {
     const newMissionEntries = []
-    for(let entry of missionEntries) {
+    for(let entry of missionEntriesRef.current) {
       if(entry.MissionID != mission.MissionID)
         newMissionEntries.push(entry)
     }
@@ -24,65 +26,74 @@ export default function MisPage () {
   }
 
   function completeMission(mission) {
-    for(let entry of missionEntries) {
+    for(let entry of missionEntriesRef.current) {
       if(entry.MissionID == mission.MissionID) {
         entry.State = "Complete"
         entry.CompleteData = mission
       }
     }
 
-    updateEntries(missionEntries)
+    updateEntries(missionEntriesRef.current)
   }
 
   function failMission(mission) {
-    for(let entry of missionEntries) {
+    for(let entry of missionEntriesRef.current) {
       if(entry.MissionID == mission.MissionID) {
         entry.State = "Failed"
         entry.FailData = mission
       }
     }
 
-    updateEntries(missionEntries)
+    updateEntries(missionEntriesRef.current)
   }
 
   function redirectMission(mission) {
-    for(let entry of missionEntries) {
+    for(let entry of missionEntriesRef.current) {
       if(entry.MissionID == mission.MissionID) {
         entry.RedirectData = mission
       }
     }
 
-    updateEntries(missionEntries)
+    updateEntries(missionEntriesRef.current)
   }
 
   function addMission(mission) {
     if(mission.Expiry) {
       const currentDate = new Date()
-      currentDate.setFullYear(currentDate.getFullYear() + ADD_YEARS_IN_FUTURE)
       const currentTS = currentDate.getTime()
-      const expiryDateTs = eliteDateTime(mission.Expiry).jsDate.getTime()
-      const expireInSeconds = (((expiryDateTs - currentTS) % 60000) / 1000).toFixed(0)
+      const expiryDateTs = new Date(mission.Expiry).getTime()
+      const expireInSeconds = Math.floor((expiryDateTs - currentTS) / 1000);
       mission.Expires = expireInSeconds
     }
 
-    missionEntries.push(mission)
-    missionEntries.sort((first, second) => first.Expires - second.Expires)
+    missionEntriesRef.current.push(mission)
+    missionEntriesRef.current.sort((first, second) => first.Expires - second.Expires)
 
-    updateEntries(missionEntries)
+    updateEntries(missionEntriesRef.current)
   }
 
   function updateEntries(missions) {
-    setMissionEntries(missions)
-    // Only select a log entry if one isn't set already
-    setSelectedMissionEntry(prevState => prevState || missions[0])
+    setMissionEntries(missions);
+  
+    if (!missions || missions.length === 0) {
+      setSelectedMissionEntry(null);
+      return;
+    }
+  
+    if (selectedMissionEntryRef.current) {
+      const stillHasSelectedMission = missions.find(m => m.MissionID === selectedMissionEntryRef.current.MissionID);
+      if (!stillHasSelectedMission) {
+        setSelectedMissionEntry({ ...missions[missions.length - 1] });
+        return;
+      }
+    }
+  
+    setSelectedMissionEntry(prevState => prevState || { ...missions[missions.length - 1] });
   }
 
   useEffect(animateTableEffect)
 
-  useEffect(async () => {
-    if (!connected) return
-    setComponentReady(false)
-    const newMissionEntries = await sendEvent('getMissions', { count: 100 })
+  function updateAllMissions(newMissionEntries){
     if(!newMissionEntries) return
 
     const missions = []
@@ -108,11 +119,26 @@ export default function MisPage () {
     if (Array.isArray(missions) && missions.length > 0) {
       updateEntries(missions)
     }
+  }
+
+  useEffect(() => {
+    selectedMissionEntryRef.current = selectedMissionEntry;
+  }, [selectedMissionEntry]);
+
+  useEffect(() => {
+    missionEntriesRef.current = missionEntries;
+  }, [missionEntries]);
+
+  useEffect(async () => {
+    if (!connected) return
+    setComponentReady(false)
+    const newMissionEntries = await sendEvent('getActiveMissions', { count: 100 })
+    updateAllMissions(newMissionEntries)
     setComponentReady(true)
-  }, [connected, ready])
+  }, [connected])
 
   useEffect(() => eventListener('newLogEntry', async (newLogEntry) => {
-    if (!['MissionAbandoned', 'MissionAccepted', 'MissionCompleted', 'MissionFailed', 'MissionRedirected'].includes(newLogEntry.event))
+    if (!['MissionAbandoned', 'MissionAccepted', 'MissionCompleted', 'MissionFailed', 'MissionRedirected', 'Missions'].includes(newLogEntry.event))
       return
 
     switch(newLogEntry.event) {
@@ -131,6 +157,10 @@ export default function MisPage () {
       case "MissionRedirected":
         redirectMission(newLogEntry)
         break
+      case "Missions":
+        //reload all missions
+        updateAllMissions(newLogEntry)
+        break;
       default:
         break
     }

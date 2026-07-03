@@ -130,7 +130,8 @@ function secondsToStr (seconds = 0) {
   if (seconds) {
       return seconds + ' second' + numberEnding(seconds);
   }
-  return 'less than a second';
+
+  return 'never';
 }
 
 module.exports = {

@@ -152,8 +152,9 @@ function NavigationTableRow ({ stars, systemObject, depth = 0, setSystemObject, 
     for(let signal of signals) {
       if(signal.BodyID == systemObject.bodyId)
         for(let singleSignal of signal.Signals){
-          //TODO do not use localised text for other languages
-          systemObject[singleSignal.Type_Localised] = singleSignal
+          //sanitize type "$SAA_SignalType_Geological;" to "Geological" or "$SAA_SignalType_Biological;" to "Biological" etc...
+          const type = singleSignal.Type.replace(';', '').split('_').pop()
+          systemObject[type] = singleSignal
         }
     }
   }

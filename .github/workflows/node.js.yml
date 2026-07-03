@@ -16,12 +16,15 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [24.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v3
+    - uses: repolevedavaj/install-nsis@v1.2.1
+      with:
+        nsis-version: '3.12'
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
